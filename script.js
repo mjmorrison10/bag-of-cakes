@@ -1,77 +1,303 @@
-// Bag of Cakes - Interactive Scripts
+/* ============================================
+   BAG OF CAKES — Interactive Script
+   Features: scroll progress, navbar, mobile menu,
+   open/closed status, scroll animations, back-to-top,
+   form validation, smooth scroll, mobile CTA bar
+   ============================================ */
 
-const mobileToggle = document.getElementById('mobileToggle');
-const navLinks = document.getElementById('navLinks');
-mobileToggle.addEventListener('click', () => { navLinks.classList.toggle('active'); mobileToggle.classList.toggle('active'); });
-navLinks.querySelectorAll('a').forEach(link => { link.addEventListener('click', () => { navLinks.classList.remove('active'); mobileToggle.classList.remove('active'); }); });
+document.addEventListener('DOMContentLoaded', () => {
 
-const navbar = document.getElementById('navbar');
-window.addEventListener('scroll', () => { if (window.scrollY > 50) navbar.classList.add('scrolled'); else navbar.classList.remove('scrolled'); });
+    /* ---- Scroll Progress Bar ---- */
+    const scrollProgress = document.getElementById('scrollProgress');
+    function updateScrollProgress() {
+        const scrollTop = window.scrollY;
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const percent = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+        scrollProgress.style.width = percent + '%';
+    }
 
-document.querySelectorAll('a[href^="#"]').forEach(anchor => { anchor.addEventListener('click', function(e) { e.preventDefault(); const target = document.querySelector(this.getAttribute('href')); if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); });
+    /* ---- Navbar Scroll State ---- */
+    const navbar = document.getElementById('navbar');
+    function updateNavbar() {
+        navbar.classList.toggle('scrolled', window.scrollY > 60);
+    }
 
-const scrollProgress = document.getElementById('scrollProgress');
-function updateScrollProgress() { const scrollTop = window.pageYOffset || document.documentElement.scrollTop; const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight; scrollProgress.style.width = (scrollTop / docHeight) * 100 + '%'; }
-window.addEventListener('scroll', updateScrollProgress);
+    /* ---- Open/Closed Status Indicator ---- */
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    function updateOpenClosed() {
+        const now = new Date();
+        const day = now.getDay(); // 0=Sun, 1=Mon, 2=Tue...6=Sat
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+        const time = hours + minutes / 60;
 
-const backToTop = document.getElementById('backToTop');
-function toggleBackToTop() { if (window.scrollY > 400) backToTop.classList.add('visible'); else backToTop.classList.remove('visible'); }
-backToTop.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
-window.addEventListener('scroll', toggleBackToTop);
+        // Business hours: Tue-Sat 8AM-7PM, Sun 9AM-5PM, Mon Closed
+        let isOpen = false;
+        if (day === 1) {
+            // Monday - Closed
+            isOpen = false;
+        } else if (day === 0) {
+            // Sunday - 9AM to 5PM
+            isOpen = time >= 9 && time < 17;
+        } else {
+            // Tue-Sat - 8AM to 7PM
+            isOpen = time >= 8 && time < 19;
+        }
 
-function animateCounter(element, target, duration) { const startTime = performance.now(); function update(currentTime) { const elapsed = currentTime - startTime; const progress = Math.min(elapsed / duration, 1); const easeProgress = 1 - Math.pow(1 - progress, 3); const current = Math.floor(easeProgress * target); element.textContent = target >= 1000 ? current.toLocaleString() + '+' : current + '+'; if (progress < 1) requestAnimationFrame(update); } requestAnimationFrame(update); }
-function fadeInElement(element) { element.style.opacity = '0'; element.style.transform = 'scale(0.5)'; element.style.transition = 'all 0.6s ease'; requestAnimationFrame(() => { element.style.opacity = '1'; element.style.transform = 'scale(1)'; }); }
+        if (statusDot && statusText) {
+            statusDot.className = isOpen ? 'status-dot' : 'status-dot closed';
+            statusText.textContent = isOpen ? 'Open Now' : 'Closed';
+        }
+    }
 
-const statsObserver = new IntersectionObserver((entries) => { entries.forEach(entry => { if (entry.isIntersecting) { const el = entry.target; const count = el.getAttribute('data-count'); const suffix = el.getAttribute('data-suffix'); if (suffix) fadeInElement(el); else if (count !== null) { const target = parseInt(count, 10); if (!isNaN(target) && target > 0) { el.classList.add('counting'); animateCounter(el, target, 2000); } else fadeInElement(el); } statsObserver.unobserve(el); } }); }, { threshold: 0.5 });
-document.querySelectorAll('.stats-number[data-count]').forEach(el => statsObserver.observe(el));
+    /* ---- Mobile Menu Toggle ---- */
+    const mobileToggle = document.getElementById('mobileToggle');
+    const mobileMenu = document.getElementById('mobileMenu');
 
-const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' };
-const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if (entry.isIntersecting) { const parent = entry.target.parentElement; const siblings = Array.from(parent.children).filter(c => c.classList.contains('service-card') || c.classList.contains('review-card') || c.classList.contains('why-feature') || c.classList.contains('detail-card')); const idx = siblings.indexOf(entry.target); entry.target.style.animationDelay = (idx >= 0 ? idx * 0.1 : 0) + 's'; entry.target.classList.add('animate-in'); observer.unobserve(entry.target); } }); }, observerOptions);
-document.querySelectorAll('.service-card, .review-card, .why-feature, .detail-card').forEach(el => { el.style.opacity = '0'; observer.observe(el); });
+    function openMobileMenu() {
+        mobileToggle.classList.add('active');
+        mobileMenu.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
 
-const heroContent = document.querySelector('.hero-content');
-function parallaxHero() { const scrolled = window.pageYOffset; if (scrolled < document.querySelector('.hero').offsetHeight) heroContent.style.transform = `translateY(${scrolled * 0.3}px)`; }
-window.addEventListener('scroll', parallaxHero);
+    function closeMobileMenu() {
+        mobileToggle.classList.remove('active');
+        mobileMenu.classList.remove('open');
+        document.body.style.overflow = '';
+    }
 
-function createParticles() { const container = document.getElementById('heroParticles'); if (!container) return; for (let i = 0; i < 20; i++) { const p = document.createElement('div'); p.classList.add('hero-particle'); p.style.left = Math.random() * 100 + '%'; p.style.top = Math.random() * 100 + '%'; p.style.animationDelay = Math.random() * 4 + 's'; p.style.animationDuration = (3 + Math.random() * 3) + 's'; p.style.width = (4 + Math.random() * 6) + 'px'; p.style.height = p.style.width; container.appendChild(p); } }
-createParticles();
-
-let autoScrollInterval = null;
-function startAutoScroll() { const rg = document.getElementById('reviewsGrid'); if (!rg || window.innerWidth >= 768) return; let dir = 1; autoScrollInterval = setInterval(() => { const max = rg.scrollWidth - rg.clientWidth; if (rg.scrollLeft >= max - 2) dir = -1; else if (rg.scrollLeft <= 2) dir = 1; rg.scrollLeft += dir * 1; }, 30); }
-function stopAutoScroll() { if (autoScrollInterval) { clearInterval(autoScrollInterval); autoScrollInterval = null; } }
-function checkAutoScroll() { if (window.innerWidth < 768) { if (!autoScrollInterval) startAutoScroll(); } else stopAutoScroll(); }
-const rg = document.getElementById('reviewsGrid');
-if (rg) { rg.addEventListener('touchstart', stopAutoScroll); rg.addEventListener('touchend', () => { setTimeout(() => { if (window.innerWidth < 768) startAutoScroll(); }, 3000); }); }
-window.addEventListener('resize', checkAutoScroll); checkAutoScroll();
-
-const contactForm = document.getElementById('contactForm');
-const formFields = contactForm.querySelectorAll('input, select, textarea');
-formFields.forEach(f => { f.addEventListener('input', function() { const g = this.closest('.form-group'); if (this.value.trim().length > 0) g.classList.add('valid'); else g.classList.remove('valid'); }); f.addEventListener('blur', function() { if (this.hasAttribute('required') && this.value.trim().length === 0) this.closest('.form-group').classList.remove('valid'); }); });
-
-contactForm.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(this).entries());
-    const subject = encodeURIComponent(`Cake Order - ${data.orderType || 'General'} - Bag of Cakes`);
-    const body = encodeURIComponent(`Name: ${data.name}\nPhone: ${data.phone}\nEmail: ${data.email || 'N/A'}\nOrder Type: ${data.orderType || 'N/A'}\nServings: ${data.partySize || 'N/A'}\nDetails: ${data.message || 'N/A'}\n\nPlease confirm my order.`);
-    window.location.href = `mailto:info@bagofcakes.com?subject=${subject}&body=${body}`;
-    const btn = this.querySelector('button[type="submit"]'); const orig = btn.innerHTML;
-    btn.innerHTML = '&#10003; Request Sent!'; btn.style.background = '#10b981'; btn.style.borderColor = '#10b981';
-    setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; btn.style.borderColor = ''; this.reset(); formFields.forEach(f => f.closest('.form-group').classList.remove('valid')); }, 3000);
-});
-
-setTimeout(() => { document.querySelectorAll('.hero-ctas .btn').forEach(btn => btn.classList.add('btn-pulse')); }, 3000);
-
-const sections = document.querySelectorAll('section[id]');
-const navLinksList = document.querySelectorAll('.nav-links a[data-section]');
-function updateActiveNav() { const scrollPos = window.scrollY + 120; sections.forEach(s => { const top = s.offsetTop, h = s.offsetHeight, id = s.getAttribute('id'); if (scrollPos >= top && scrollPos < top + h) { navLinksList.forEach(l => { l.classList.remove('active-section'); if (l.getAttribute('data-section') === id) l.classList.add('active-section'); }); } }); }
-window.addEventListener('scroll', updateActiveNav); updateActiveNav();
-
-document.querySelectorAll('a[href^="tel:"]').forEach(link => { link.addEventListener('click', () => { if (typeof gtag === 'function') gtag('event', 'click_to_call', { business: 'Bag of Cakes' }); }); });
-
-window.addEventListener('load', () => {
-    ['.hero-badge', '.hero h1', '.hero-sub', '.hero-ctas', '.hero-trust'].forEach((sel, i) => {
-        const el = document.querySelector(sel);
-        if (el) { el.style.opacity = '0'; el.style.transform = 'translateY(20px)'; setTimeout(() => { el.style.transition = 'all 0.6s ease'; el.style.opacity = '1'; el.style.transform = 'translateY(0)'; }, 200 + i * 200); }
+    mobileToggle.addEventListener('click', () => {
+        if (mobileMenu.classList.contains('open')) {
+            closeMobileMenu();
+        } else {
+            openMobileMenu();
+        }
     });
+
+    // Close mobile menu on link click
+    mobileMenu.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', closeMobileMenu);
+    });
+
+    // Close mobile menu on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && mobileMenu.classList.contains('open')) {
+            closeMobileMenu();
+        }
+    });
+
+    /* ---- Scroll Animations (Intersection Observer) ---- */
+    const revealElements = document.querySelectorAll('.reveal, .reveal-left, .reveal-right');
+    const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('revealed');
+                // Unobserve after revealing to save performance
+                revealObserver.unobserve(entry.target);
+            }
+        });
+    }, {
+        threshold: 0.08,
+        rootMargin: '0px 0px -40px 0px'
+    });
+    revealElements.forEach(el => revealObserver.observe(el));
+
+    /* ---- Mobile CTA Bar ---- */
+    const mobileCtaBar = document.getElementById('mobileCtaBar');
+    function updateMobileCta() {
+        if (mobileCtaBar && window.innerWidth < 1024) {
+            mobileCtaBar.classList.toggle('visible', window.scrollY > 500);
+        }
+    }
+
+    /* ---- Back to Top Button ---- */
+    const backToTop = document.getElementById('backToTop');
+    function updateBackToTop() {
+        backToTop.classList.toggle('visible', window.scrollY > 600);
+    }
+    backToTop.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    /* ---- Consolidated Scroll Handler ---- */
+    let scrollTicking = false;
+    window.addEventListener('scroll', () => {
+        if (!scrollTicking) {
+            requestAnimationFrame(() => {
+                updateScrollProgress();
+                updateNavbar();
+                updateMobileCta();
+                updateBackToTop();
+                scrollTicking = false;
+            });
+            scrollTicking = true;
+        }
+    });
+
+    /* ---- Form Validation ---- */
+    const form = document.getElementById('contactForm');
+    const formSuccess = document.getElementById('formSuccess');
+    const formErrorBanner = document.getElementById('formError');
+
+    if (form) {
+        // Real-time validation: remove error on input
+        form.querySelectorAll('input, textarea, select').forEach(field => {
+            field.addEventListener('input', () => {
+                field.classList.remove('error');
+                const errorEl = document.getElementById(field.id + 'Error');
+                if (errorEl) errorEl.textContent = '';
+            });
+            field.addEventListener('focus', () => {
+                field.classList.remove('error');
+            });
+        });
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            // Clear previous errors
+            form.querySelectorAll('input, textarea, select').forEach(el => el.classList.remove('error'));
+            form.querySelectorAll('.form-error-msg').forEach(el => el.textContent = '');
+            formErrorBanner.classList.remove('show');
+
+            let hasError = false;
+
+            // Validate Name
+            const nameField = form.querySelector('#name');
+            const nameVal = nameField.value.trim();
+            const nameError = document.getElementById('nameError');
+            if (!nameVal) {
+                nameField.classList.add('error');
+                if (nameError) nameError.textContent = 'Name is required';
+                hasError = true;
+            } else if (nameVal.length < 2) {
+                nameField.classList.add('error');
+                if (nameError) nameError.textContent = 'Name must be at least 2 characters';
+                hasError = true;
+            }
+
+            // Validate Phone
+            const phoneField = form.querySelector('#phone');
+            const phoneVal = phoneField.value.trim();
+            const phoneError = document.getElementById('phoneError');
+            const phoneDigits = phoneVal.replace(/\D/g, '');
+            if (!phoneVal) {
+                phoneField.classList.add('error');
+                if (phoneError) phoneError.textContent = 'Phone is required';
+                hasError = true;
+            } else if (phoneDigits.length < 7) {
+                phoneField.classList.add('error');
+                if (phoneError) phoneError.textContent = 'Enter a valid phone number';
+                hasError = true;
+            }
+
+            // Validate Email (if provided)
+            const emailField = form.querySelector('#email');
+            const emailVal = emailField.value.trim();
+            const emailError = document.getElementById('emailError');
+            if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+                emailField.classList.add('error');
+                if (emailError) emailError.textContent = 'Enter a valid email address';
+                hasError = true;
+            }
+
+            if (hasError) {
+                formErrorBanner.classList.add('show');
+                formSuccess.classList.remove('show');
+                // Scroll to first error
+                const firstError = form.querySelector('.error');
+                if (firstError) {
+                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstError.focus();
+                }
+                // Auto-hide error banner
+                setTimeout(() => formErrorBanner.classList.remove('show'), 5000);
+                return;
+            }
+
+            // Success
+            formSuccess.classList.add('show');
+            formErrorBanner.classList.remove('show');
+            form.reset();
+
+            // Auto-hide success message
+            setTimeout(() => formSuccess.classList.remove('show'), 6000);
+        });
+    }
+
+    /* ---- Smooth Scroll for Anchor Links ---- */
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            const targetId = this.getAttribute('href');
+            if (targetId === '#') return;
+            const target = document.querySelector(targetId);
+            if (target) {
+                e.preventDefault();
+                const navHeight = navbar.offsetHeight;
+                const targetPosition = target.getBoundingClientRect().top + window.scrollY - navHeight - 16;
+                window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+            }
+        });
+    });
+
+    /* ---- Active Nav Link Highlighting ---- */
+    const sections = document.querySelectorAll('section[id]');
+    const navLinksAll = document.querySelectorAll('.nav-links a[href^="#"]');
+
+    function updateActiveNav() {
+        const scrollY = window.scrollY + 120;
+        sections.forEach(section => {
+            const top = section.offsetTop;
+            const height = section.offsetHeight;
+            const id = section.getAttribute('id');
+            if (scrollY >= top && scrollY < top + height) {
+                navLinksAll.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === '#' + id) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+        });
+    }
+
+    // Add active nav link styles dynamically
+    const activeStyle = document.createElement('style');
+    activeStyle.textContent = `
+        .nav-links a.active {
+            color: var(--fuchsia) !important;
+            background: var(--gray-100);
+        }
+    `;
+    document.head.appendChild(activeStyle);
+
+    // Throttled scroll for active nav
+    let navTicking = false;
+    window.addEventListener('scroll', () => {
+        if (!navTicking) {
+            requestAnimationFrame(() => {
+                updateActiveNav();
+                navTicking = false;
+            });
+            navTicking = true;
+        }
+    });
+
+    /* ---- Initialize ---- */
     updateScrollProgress();
+    updateNavbar();
+    updateOpenClosed();
+    updateActiveNav();
+
+    // Update open/closed every minute
+    setInterval(updateOpenClosed, 60000);
+
+    // Handle window resize for mobile CTA bar
+    window.addEventListener('resize', () => {
+        if (window.innerWidth >= 1024 && mobileCtaBar) {
+            mobileCtaBar.classList.remove('visible');
+        }
+    });
+
 });
